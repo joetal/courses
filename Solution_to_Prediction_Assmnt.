@@ -1,0 +1,75 @@
+Goal:
+The goal of the project is to predict the manner in which the group of enthusiasts take measurements about themselves regularly to improve their health, for finding patterns in their behavior of doing exercises (i.e. Classe Variable in the train dataset) and implement the machine learned algorithm on the test dataset for validation.
+Steps for Building Solution Based on Machine Learning:
+1.	Data Preprocessing:
+
+i) Loading data into memory:
+
+> trainingdata <- read.csv("pml-training.csv", stringsAsFactors = FALSE)
+> testingdata <- read.csv("pml-testing.csv")
+The train dataset consist of 160 variables for analysis.
+> length(names(trainingdata))
+
+ii) Preprocessing for Missing Values:
+   
+ Before analysis of data we need to take care of entities like NA, NaN, Inf. We can set a standard value like 0 in them or we can simply prune them in both training data and testing data sets. There are some blank cells which need preprocessing. Also we need to consider only numeric values.
+A sample is shown for training data set as follows:
+> trainingdata[is.na(trainingdata)] <- 0
+> trainingdata[is.nan(unlist(trainingdata))] <- 0
+> trainingdata[is.infinite(unlist(trainingdata))] <- 0
+or
+NAs <- apply(trainingdata,2,function(x) {sum(is.na(x))})
+finalData <- trainingData[,which(NAs == 0)]
+> tstore <- trainingdata[, c(1:7, 160)]
+> tstore.s <- trainingdata[, -c(1:7, 160)]
+> train <- cbind(tstore, tstore.s)
+
+The same can be repeated for testing data.
+
+iii) Creating training set via partitioning:
+We will load caret package /library. Create proportioned training and testing data with probability of 0.2.
+> Train <- createDataPartition(y = trainingdata$classe, p = 0.2, list = FALSE)
+> training <- trainingdata[Train, ]
+> testing <- trainingdata[-Train, ]
+> validdata <- training[, -1:-7]
+> validdata[, 1] <- as.factor(validdata[, 1])
+
+iv) Tuning Cross Validation
+> cvalid <- trainControl(method = "cv", number = 5, returnResamp = "all") [k = 5 in K-fold]
+
+2.	Modelling with training dataset: 
+
+There could be many solutions like Random forest model, SVM, PCM,Trees with bagging etc. which could be  used as machine learning model . One is depicted as follows:
+>model.treebag <- train(classe ~ ., method = "treebag", data = validdata, trControl = cvalid)
+>Loading required package: ipred
+>Loading required package: plyr
+
+3.	Prediction for validation: 
+
+> result2 <- predict(model.treebag, newdata = testing)
+> confusionMatrix(result2, testing$classe)
+This will display Confusion Matrix and Statistics with Accuracy of 96 %.
+Confusion Matrix:
+                             Reference
+Prediction    A     B     C     D   	 E
+         A       4367 114    7    3    2
+         B         57 2851   62   11   17
+         C         29   61  2641   64   24
+         D          7    3   25 2489   28
+         E          4    8    2    5 	2814
+ 
+
+Figure 1. Prediction with Model (Trees with bagging)          
+
+4.	Results:
+
+> pred <- predict(model.treebag, validation)
+
+> answers<- as.vector(pred)
+> pml_write_files = function(x){
++   n = length(x)
++   for(i in 1:n){
++     filename = paste0("problem_id_",i,".txt")
++     write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
++   } }
+This will create 20 files with denotation problem_id_# in the working directory each containing predicted class (A/B/C/D/E) for the given problem.
